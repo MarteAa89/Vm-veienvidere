@@ -1,0 +1,543 @@
+<!doctype html>
+<html lang="nb">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VM 2026 – Veien til finalen</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh; background: #0d1117; color: #c9d1d9;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      display: flex; justify-content: center; padding: 24px 16px 48px;
+    }
+    .wrap { width: 100%; max-width: 480px; }
+    .header-title { font-size: 22px; font-weight: 700; color: #e6edf3; }
+    .header-sub   { font-size: 12px; color: #6e7681; margin-top: 2px; }
+
+    /* Key screen */
+    #key-screen { display: none; flex-direction: column; gap: 16px; padding-top: 48px; }
+    #key-screen h2 { font-size: 18px; font-weight: 700; color: #e6edf3; }
+    #key-screen p  { font-size: 13px; color: #8b949e; line-height: 1.6; }
+    #key-screen a  { color: #58a6ff; }
+    .key-row { display: flex; gap: 8px; }
+    #key-input {
+      flex: 1; background: #161b22; border: 1px solid #30363d;
+      border-radius: 6px; padding: 8px 12px; color: #c9d1d9;
+      font-size: 13px; font-family: monospace; outline: none;
+    }
+    #key-input:focus { border-color: #58a6ff; }
+    #key-error { font-size: 12px; color: #f85149; min-height: 16px; }
+
+    /* App */
+    #app { display: none; }
+
+    .team-picker { margin: 12px 0 0; display: flex; align-items: center; gap: 8px; }
+    .team-picker label { font-size: 12px; color: #8b949e; white-space: nowrap; }
+    .team-picker select {
+      flex: 1; background: #161b22; border: 1px solid #30363d;
+      border-radius: 6px; padding: 6px 10px;
+      color: #e6edf3; font-size: 13px; cursor: pointer; outline: none;
+    }
+    .team-picker select:focus { border-color: #58a6ff; }
+
+    .info-box {
+      background: #161b22; border: 1px solid #30363d;
+      border-radius: 8px; padding: 7px 12px;
+      font-size: 11px; color: #6e7681; margin: 8px 0;
+      display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+    }
+    .live-dot {
+      display: inline-block; width: 7px; height: 7px;
+      border-radius: 50%; background: #f85149; margin-right: 4px;
+      animation: pulse 1.2s infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+    .control-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      background: #161b22; border: 1px solid #30363d;
+      border-radius: 8px; padding: 8px 12px; margin: 8px 0;
+    }
+    .ctrl-label { font-size: 12px; color: #8b949e; }
+    .btn-row { display: flex; gap: 6px; }
+    .btn {
+      font-size: 12px; font-weight: 600; padding: 5px 14px;
+      border-radius: 6px; border: 1px solid #30363d;
+      background: #21262d; color: #c9d1d9; cursor: pointer;
+    }
+    .btn:hover:not(:disabled) { background: #30363d; }
+    .btn:disabled { color: #6e7681; cursor: not-allowed; }
+    .btn-sm { font-size: 11px; padding: 4px 10px; color: #f85149; border-color: #f85149; background: transparent; }
+    .btn-sm:hover { background: #2d1414; }
+
+    .error-box {
+      background: #2d1414; border: 1px solid #f85149; border-radius: 8px;
+      padding: 10px 14px; font-size: 13px; color: #f85149; margin-bottom: 12px; display: none;
+    }
+    .live-banner {
+      background: #2d2200; border: 1px solid #f0a000; border-radius: 8px;
+      padding: 9px 13px; font-size: 13px; color: #f0a000; margin-bottom: 10px; display: none;
+    }
+    .next-box {
+      background: #0d1f3c; border: 1px solid #1f6feb; border-radius: 8px;
+      padding: 9px 13px; font-size: 13px; color: #79c0ff; margin-bottom: 14px; display: none;
+    }
+    .next-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #58a6ff; margin-right: 6px; vertical-align: middle; }
+
+    .stats-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
+    .stat-card { flex: 1; min-width: 80px; background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 10px 8px; text-align: center; }
+    .stat-num   { font-size: 28px; font-weight: 700; }
+    .stat-label { font-size: 10px; color: #8b949e; margin-top: 2px; text-transform: uppercase; letter-spacing: .05em; }
+    .gold { color: #e8c43a; } .pos { color: #3fb950; } .neg { color: #f85149; }
+
+    .section-label {
+      font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: #6e7681;
+      border-bottom: 1px solid #21262d; padding-bottom: 4px; margin-top: 22px; margin-bottom: 10px;
+    }
+
+    table.st { width: 100%; border-collapse: collapse; font-size: 13px; background: #161b22; border: 1px solid #30363d; border-radius: 8px; overflow: hidden; margin-bottom: 10px; }
+    table.st th { background: #21262d; color: #8b949e; padding: 6px 8px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+    table.st td { padding: 7px 8px; border-top: 1px solid #21262d; }
+    table.st tr.sel td { color: #e8c43a; font-weight: 600; }
+
+    .match-card { border: 1px solid #30363d; border-radius: 8px; padding: 10px 14px; margin-bottom: 7px; display: flex; align-items: center; gap: 12px; background: #161b22; }
+    .match-card.done     { background: #0f2318; border-left: 3px solid #238636; border-top-left-radius:0; border-bottom-left-radius:0; }
+    .match-card.live     { background: #2d2200; border-left: 3px solid #f0a000; border-top-left-radius:0; border-bottom-left-radius:0; }
+    .match-card.upcoming { background: #0d1f3c; border-left: 3px solid #1f6feb; border-top-left-radius:0; border-bottom-left-radius:0; }
+    .flags  { font-size: 1.25rem; flex-shrink: 0; min-width: 46px; }
+    .minfo  { flex: 1; }
+    .mteams { font-size: 14px; font-weight: 600; color: #e6edf3; }
+    .mmeta  { font-size: 11px; color: #8b949e; margin-top: 2px; }
+    .mright { display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
+    .mresult { font-size: 17px; font-weight: 700; color: #3fb950; }
+    .mresult.live-score { color: #f0a000; }
+    .elapsed { font-size: 11px; color: #f0a000; font-weight: 600; }
+
+    .badge { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 4px; white-space: nowrap; }
+    .badge.done     { background: #0f2318; color: #3fb950; border: 1px solid #238636; }
+    .badge.live     { background: #2d2200; color: #f0a000; border: 1px solid #f0a000; }
+    .badge.upcoming { background: #0d1f3c; color: #58a6ff; border: 1px solid #1f6feb; }
+    .badge.tbd      { background: #161b22; color: #6e7681; border: 1px solid #30363d; }
+
+    .ko-card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 12px 14px; }
+    .ko-card.done { background: #0f2318; border-left: 3px solid #238636; border-top-left-radius:0; border-bottom-left-radius:0; }
+    .ko-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 6px; }
+    .ko-round  { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #8b949e; }
+    .ko-round.final { font-size: 13px; color: #e8c43a; }
+    .ko-meta   { display: flex; align-items: center; gap: 7px; }
+    .ko-date   { font-size: 11px; color: #6e7681; }
+    .ko-scenario { font-size: 12px; color: #79c0ff; background: #0d1f3c; border: 1px solid #1f6feb; border-radius: 5px; padding: 5px 9px; margin-bottom: 6px; }
+    .po-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: #6e7681; margin-bottom: 5px; }
+    .po-grid  { display: flex; flex-wrap: wrap; gap: 6px; }
+    .po-tag   { background: #21262d; border: 1px solid #30363d; border-radius: 6px; padding: 5px 10px; font-size: 12px; display: flex; flex-direction: column; gap: 1px; }
+    .po-team  { font-weight: 600; color: #e6edf3; }
+    .po-note  { font-size: 10px; color: #8b949e; }
+    .connector { text-align: center; color: #30363d; font-size: 14px; margin: 2px 0; }
+    .trophy    { text-align: center; font-size: 2rem; margin: 18px 0 4px; }
+    .footer    { text-align: center; font-size: 11px; color: #484f58; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <div style="margin-bottom:12px">
+    <div class="header-title">VM 2026 &#8211; Veien til finalen</div>
+    <div class="header-sub">FIFA World Cup &middot; USA / Canada / Mexico</div>
+  </div>
+
+  <!-- API-nøkkel hardkodet -->
+  <div id="key-screen" style="display:none"></div>
+
+  <!-- Hoved-app -->
+  <div id="app">
+    <div class="team-picker">
+      <label for="team-select">Velg lag:</label>
+      <select id="team-select" onchange="onTeamChange()">
+        <option>Laster lag&hellip;</option>
+      </select>
+    </div>
+
+    <div class="info-box" id="info-box">
+      <span><span class="live-dot"></span>Live-data fra api-football.com &middot; oppdateres hvert 15. sek under kamp</span>
+    </div>
+
+    <div class="control-bar">
+      <div class="ctrl-label" id="ctrl-label">Laster data&hellip;</div>
+      <div class="btn-row">
+<button class="btn" id="refresh-btn" onclick="loadAll()" disabled>&#8635; Oppdater</button>
+      </div>
+    </div>
+
+    <div class="error-box"   id="error-box"></div>
+    <div class="live-banner" id="live-banner"></div>
+    <div class="next-box"    id="next-box"></div>
+    <div class="stats-grid"  id="stats"></div>
+
+    <div class="section-label" id="group-label">Gruppestilling</div>
+    <table class="st">
+      <thead><tr>
+        <th style="text-align:left;width:28px">#</th>
+        <th style="text-align:left">Lag</th>
+        <th style="text-align:center;width:28px">K</th>
+        <th style="text-align:center;width:28px">V</th>
+        <th style="text-align:center;width:28px">U</th>
+        <th style="text-align:center;width:28px">T</th>
+        <th style="text-align:center;width:36px">MF</th>
+        <th style="text-align:center;width:28px">P</th>
+      </tr></thead>
+      <tbody id="standings"></tbody>
+    </table>
+
+    <div class="section-label" id="matches-label">Gruppespill &#8211; kamper</div>
+    <div id="matches"></div>
+
+    <div class="section-label" id="ko-label">Sluttspill &#8211; veien til finalen</div>
+    <div id="knockout"></div>
+
+    <div class="trophy">&#127942;</div>
+    <div class="footer" id="footer"></div>
+  </div>
+</div>
+
+<script>
+var STORAGE_KEY = "vm2026_api_key";
+var LEAGUE = 1, SEASON = 2026;
+var BASE = "https://v3.football.api-sports.io";
+var apiKey = "";
+
+// --- Flagg ---
+var ISO = {"Norway":"NO","France":"FR","Senegal":"SN","Iraq":"IQ","Argentina":"AR","Brazil":"BR","Spain":"ES","Portugal":"PT","Germany":"DE","Netherlands":"NL","Belgium":"BE","Sweden":"SE","Switzerland":"CH","Mexico":"MX","USA":"US","Canada":"CA","Denmark":"DK","Croatia":"HR","Uruguay":"UY","Japan":"JP","South Korea":"KR","Morocco":"MA","Australia":"AU","Serbia":"RS","Poland":"PL","Ecuador":"EC","Qatar":"QA","Tunisia":"TN","Ghana":"GH","South Africa":"ZA","Turkey":"TR","Colombia":"CO","Iran":"IR","Algeria":"DZ","Austria":"AT","Jordan":"JO","Haiti":"HT","Paraguay":"PY","Ivory Coast":"CI","Egypt":"EG","Saudi Arabia":"SA","Cape Verde":"CV","Panama":"PA","New Zealand":"NZ","DR Congo":"CD","Uzbekistan":"UZ","Bosnia & Herzegovina":"BA","Cameroon":"CM","England":"GB","Czech Republic":"CZ","Venezuela":"VE","Chile":"CL","Peru":"PE","Costa Rica":"CR","Honduras":"HN","El Salvador":"SV","Guatemala":"GT","Jamaica":"JM","Trinidad & Tobago":"TT","Cuba":"CU","Curacao":"CW","Bahrain":"BH","Kuwait":"KW","Oman":"OM","UAE":"AE","Syria":"SY","Palestine":"PS","Kyrgyzstan":"KG","Tajikistan":"TJ","Thailand":"TH","Vietnam":"VN","Indonesia":"ID","Philippines":"PH","China":"CN","India":"IN","Malaysia":"MY","Myanmar":"MM","Kenya":"KE","Zimbabwe":"ZW","Tanzania":"TZ","Zambia":"ZM","Uganda":"UG","Angola":"AO","Mozambique":"MZ","Namibia":"NA","Botswana":"BW","Malawi":"MW","Libya":"LY","Sudan":"SD","Ethiopia":"ET","Nigeria":"NG","Senegal":"SN","Mali":"ML","Burkina Faso":"BF","Niger":"NE","Benin":"BJ","Togo":"TG","Guinea":"GN","Cameroon":"CM","Congo":"CG","Gabon":"GA","Rwanda":"RW","Burundi":"BI","Somalia":"SO","Eritrea":"ER","Djibouti":"DJ","Comoros":"KM","Mauritius":"MU","Seychelles":"SC","Madagascar":"MG","Reunion":"RE","Mauritania":"MR","Western Sahara":"EH","Eswatini":"SZ","Lesotho":"LS","Slovakia":"SK","Slovenia":"SI","Bulgaria":"BG","Romania":"RO","Hungary":"HU","Greece":"GR","Cyprus":"CY","Albania":"AL","North Macedonia":"MK","Kosovo":"XK","Montenegro":"ME","Bosnia":"BA","Serbia":"RS","Moldova":"MD","Ukraine":"UA","Belarus":"BY","Lithuania":"LT","Latvia":"LV","Estonia":"EE","Finland":"FI","Norway":"NO","Iceland":"IS","Ireland":"IE","Wales":"GB","Scotland":"GB","Northern Ireland":"GB","New Zealand":"NZ","Fiji":"FJ","Papua New Guinea":"PG","Solomon Islands":"SB","Vanuatu":"VU","Samoa":"WS","Tahiti":"PF","New Caledonia":"NC","Curacao":"CW"};
+function flag(name) {
+  var code = ISO[name] || "UN";
+  return code.toUpperCase().replace(/./g, function(c){ return String.fromCodePoint(c.charCodeAt(0)+127397); });
+}
+
+// --- API ---
+function apiFetch(path) {
+  return fetch(BASE + path, { headers: { "x-apisports-key": apiKey } }).then(function(r) {
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    return r.json();
+  });
+}
+
+// --- State ---
+var allTeams = [];
+var selectedTeam = "Norway";
+var fixturesData = [];
+var standingsData = {};
+var liveData = [];
+
+// --- Key management ---
+function saveKey() {
+  var val = document.getElementById("key-input").value.trim();
+  if (!val || val.length < 16) { document.getElementById("key-error").textContent = "Ugyldig n\u00f8kkel – sjekk at du kopierte den riktig."; return; }
+  localStorage.setItem(STORAGE_KEY, val);
+  apiKey = val;
+  showApp();
+}
+function clearKey() {
+  localStorage.removeItem(STORAGE_KEY);
+  document.getElementById("key-input").value = "";
+  document.getElementById("key-error").textContent = "";
+  document.getElementById("key-screen").style.display = "flex";
+  document.getElementById("app").style.display = "none";
+}
+function showApp() {
+  document.getElementById("key-screen").style.display = "none";
+  document.getElementById("app").style.display = "block";
+  loadAll();
+}
+
+// --- Badge ---
+function badge(status) {
+  var labels = {done:"Ferdig", live:"&#128308; LIVE", upcoming:"Kommende", tbd:"TBD"};
+  return '<span class="badge ' + status + '">' + (labels[status]||"TBD") + '</span>';
+}
+
+function fmtDate(s) {
+  if (!s) return "";
+  return new Date(s).toLocaleDateString("nb-NO", {weekday:"short", day:"numeric", month:"short"});
+}
+
+// --- Load all data ---
+function loadAll() {
+  var btn = document.getElementById("refresh-btn");
+  var lbl = document.getElementById("ctrl-label");
+  var err = document.getElementById("error-box");
+  btn.disabled = true;
+  btn.textContent = "Henter\u2026";
+  lbl.textContent = "Henter live data\u2026";
+  err.style.display = "none";
+
+  Promise.all([
+    apiFetch("/fixtures?league=" + LEAGUE + "&season=" + SEASON),
+    apiFetch("/standings?league=" + LEAGUE + "&season=" + SEASON),
+    apiFetch("/fixtures?league=" + LEAGUE + "&season=" + SEASON + "&live=all")
+  ]).then(function(results) {
+    var fixturesResp = results[0];
+    var standingsResp = results[1];
+    var liveResp = results[2];
+
+    fixturesData = fixturesResp.response || [];
+    liveData = liveResp.response || [];
+
+    // Build standings map by group
+    standingsData = {};
+    var standingsArr = (standingsResp.response && standingsResp.response[0] && standingsResp.response[0].league && standingsResp.response[0].league.standings) || [];
+    standingsArr.forEach(function(group) {
+      if (group && group[0] && group[0].group) {
+        standingsData[group[0].group] = group;
+      }
+    });
+
+    // Build team list from group stage only
+    var teamSet = {};
+    fixturesData.forEach(function(f) {
+      if (f.league && f.league.round && f.league.round.indexOf("Group") > -1) {
+        teamSet[f.teams.home.name] = true;
+        teamSet[f.teams.away.name] = true;
+      }
+    });
+    allTeams = Object.keys(teamSet).sort();
+
+    // Populate selector
+    var sel = document.getElementById("team-select");
+    sel.innerHTML = allTeams.map(function(t) {
+      return '<option value="' + t + '">' + t + '</option>';
+    }).join("");
+    if (allTeams.indexOf("Norway") > -1) { sel.value = "Norway"; selectedTeam = "Norway"; }
+    else if (allTeams.length) { sel.value = allTeams[0]; selectedTeam = allTeams[0]; }
+
+    renderTeam(selectedTeam);
+
+    var now = new Date().toLocaleTimeString("nb-NO");
+    lbl.textContent = "Oppdatert kl. " + now + (liveData.length ? " \u00b7 " + liveData.length + " kamp(er) live" : "");
+    document.getElementById("footer").textContent = "Data: api-football.com \u00b7 Live under kamp, ellers daglig \u00b7 League ID 1, Season 2026";
+
+  }).catch(function(e) {
+    err.textContent = "\u26a0\ufe0f Feil: " + e.message + ". Sjekk at API-n\u00f8kkelen er gyldig.";
+    err.style.display = "block";
+    lbl.textContent = "Feil ved henting";
+  }).finally(function() {
+    btn.disabled = false;
+    btn.textContent = "\u21bb Oppdater";
+  });
+}
+
+function onTeamChange() {
+  selectedTeam = document.getElementById("team-select").value;
+  renderTeam(selectedTeam);
+}
+
+function renderTeam(team) {
+  // Find team's group
+  var teamGroup = null;
+  fixturesData.some(function(f) {
+    if ((f.teams.home.name === team || f.teams.away.name === team) && f.league.round && f.league.round.indexOf("Group") > -1) {
+      teamGroup = f.league.round.replace("Group Stage - ", "Group ");
+      return true;
+    }
+  });
+
+  // Find correct standings group key
+  var standingGroup = null;
+  Object.keys(standingsData).forEach(function(k) {
+    standingsData[k].forEach(function(row) {
+      if (row.team && row.team.name === team) standingGroup = k;
+    });
+  });
+
+  // Update labels
+  document.getElementById("group-label").textContent = (standingGroup || teamGroup || "Gruppe") + " \u2013 stilling";
+  document.getElementById("matches-label").textContent = "Gruppespill \u2013 " + team + "s kamper";
+  document.getElementById("ko-label").textContent = "Sluttspill \u2013 " + team + "s vei til finalen";
+
+  // Team's group fixtures
+  var teamFixtures = fixturesData.filter(function(f) {
+    return (f.teams.home.name === team || f.teams.away.name === team) && f.league.round && f.league.round.indexOf("Group") > -1;
+  });
+
+  // Check if any live
+  var teamLive = liveData.filter(function(f) {
+    return f.teams.home.name === team || f.teams.away.name === team;
+  });
+
+  // Live banner
+  var liveBanner = document.getElementById("live-banner");
+  if (teamLive.length) {
+    var lf = teamLive[0];
+    liveBanner.innerHTML = '<span class="live-dot"></span><strong>LIVE:</strong> ' + lf.teams.home.name + ' ' + (lf.goals.home !== null ? lf.goals.home : 0) + ' \u2013 ' + (lf.goals.away !== null ? lf.goals.away : 0) + ' ' + lf.teams.away.name + ' (' + (lf.fixture.status.elapsed || 0) + "')";
+    liveBanner.style.display = "block";
+  } else {
+    liveBanner.style.display = "none";
+  }
+
+  // Next match
+  var next = teamFixtures.find(function(f) { return f.fixture.status.short === "NS"; });
+  var nb = document.getElementById("next-box");
+  if (next) {
+    var nd = new Date(next.fixture.date);
+    nb.innerHTML = '<span class="next-dot"></span><strong>Neste:</strong> ' + flag(next.teams.home.name) + ' ' + next.teams.home.name + ' vs. ' + flag(next.teams.away.name) + ' ' + next.teams.away.name + ' &middot; ' + nd.toLocaleDateString("nb-NO",{weekday:"short",day:"numeric",month:"short"}) + ' ' + nd.toLocaleTimeString("nb-NO",{hour:"2-digit",minute:"2-digit"}) + (next.fixture.venue && next.fixture.venue.name ? ' &middot; ' + next.fixture.venue.name : '');
+    nb.style.display = "block";
+  } else {
+    nb.style.display = "none";
+  }
+
+  // Stats from standings
+  var teamRow = null;
+  if (standingGroup && standingsData[standingGroup]) {
+    teamRow = standingsData[standingGroup].find(function(r) { return r.team && r.team.name === team; });
+  }
+
+  var statsHtml = "";
+  if (teamRow) {
+    var all = teamRow.all || {};
+    var gd = (all.goals && all.goals.for !== undefined) ? (all.goals.for - all.goals.against) : 0;
+    statsHtml += '<div class="stat-card"><div class="stat-num gold">' + teamRow.points + '</div><div class="stat-label">Poeng</div></div>';
+    statsHtml += '<div class="stat-card"><div class="stat-num gold">' + (all.goals ? all.goals.for : 0) + '</div><div class="stat-label">M\u00e5l scoret</div></div>';
+    statsHtml += '<div class="stat-card"><div class="stat-num ' + (gd >= 0 ? "pos" : "neg") + '">' + (gd > 0 ? "+" : "") + gd + '</div><div class="stat-label">M\u00e5lforskjell</div></div>';
+  }
+  document.getElementById("stats").innerHTML = statsHtml;
+
+  // Standings table
+  var standRows = (standingGroup && standingsData[standingGroup]) || [];
+  document.getElementById("standings").innerHTML = standRows.map(function(r) {
+    var isSel = r.team && r.team.name === team;
+    var all = r.all || {};
+    var gd = all.goals ? (all.goals.for - all.goals.against) : 0;
+    return '<tr class="' + (isSel ? "sel" : "") + '">' +
+      '<td style="text-align:left">' + r.rank + '</td>' +
+      '<td style="text-align:left">' + flag(r.team.name) + ' ' + r.team.name + '</td>' +
+      '<td style="text-align:center">' + (all.played||0) + '</td>' +
+      '<td style="text-align:center">' + (all.win||0) + '</td>' +
+      '<td style="text-align:center">' + (all.draw||0) + '</td>' +
+      '<td style="text-align:center">' + (all.lose||0) + '</td>' +
+      '<td style="text-align:center">' + (gd > 0 ? "+" : "") + gd + '</td>' +
+      '<td style="text-align:center;font-weight:600">' + r.points + '</td>' +
+    '</tr>';
+  }).join("");
+
+  // Match cards
+  document.getElementById("matches").innerHTML = teamFixtures.map(function(f) {
+    var s = f.fixture.status.short;
+    var isLive = ["1H","HT","2H","ET","P","BT","LIVE"].indexOf(s) > -1;
+    var isDone = ["FT","AET","PEN"].indexOf(s) > -1;
+    var status = isDone ? "done" : isLive ? "live" : "upcoming";
+
+    var liveF = liveData.find(function(l){ return l.fixture.id === f.fixture.id; });
+    var gh = isDone ? f.goals.home : (liveF ? liveF.goals.home : null);
+    var ga = isDone ? f.goals.away : (liveF ? liveF.goals.away : null);
+    var result = (gh !== null && ga !== null) ? gh + "\u20138" + ga : null;
+    var resultStr = result ? gh + "&#8211;" + ga : null;
+
+    var fd = new Date(f.fixture.date);
+    var dateStr = fd.toLocaleDateString("nb-NO",{weekday:"short",day:"numeric",month:"short"}) + " " + fd.toLocaleTimeString("nb-NO",{hour:"2-digit",minute:"2-digit"});
+    var venue = (f.fixture.venue && f.fixture.venue.city) ? f.fixture.venue.city : "";
+    var elapsed = isLive ? (liveF ? liveF.fixture.status.elapsed : f.fixture.status.elapsed) : null;
+
+    return '<div class="match-card ' + status + '">' +
+      '<span class="flags">' + flag(f.teams.home.name) + flag(f.teams.away.name) + '</span>' +
+      '<div class="minfo">' +
+        '<div class="mteams">' + f.teams.home.name + ' vs. ' + f.teams.away.name + '</div>' +
+        '<div class="mmeta">' + dateStr + (venue ? ' &middot; ' + venue : '') + '</div>' +
+      '</div>' +
+      '<div class="mright">' +
+        (elapsed ? '<span class="elapsed">' + elapsed + "'</span>" : '') +
+        (resultStr ? '<span class="mresult' + (isLive ? ' live-score' : '') + '">' + resultStr + '</span>' : '') +
+        badge(status) +
+      '</div>' +
+    '</div>';
+  }).join("");
+
+  // Knockout rounds (static bracket logic based on group)
+  renderKnockout(team, standingGroup, standingsData);
+}
+
+// --- Knockout ---
+var BRACKET_MAP = {
+  "Group A":{"r32":"Group B"},"Group B":{"r32":"Group A"},
+  "Group C":{"r32":"Group D"},"Group D":{"r32":"Group C"},
+  "Group E":{"r32":"Group F"},"Group F":{"r32":"Group E"},
+  "Group G":{"r32":"Group H"},"Group H":{"r32":"Group G"},
+  "Group I":{"r32":"Group J"},"Group J":{"r32":"Group I"},
+  "Group K":{"r32":"Group L"},"Group L":{"r32":"Group K"}
+};
+var GROUP_ORDER = ["Group A","Group B","Group C","Group D","Group E","Group F","Group G","Group H","Group I","Group J","Group K","Group L"];
+
+function renderKnockout(team, standingGroup, standingsData) {
+  var bracket = standingGroup ? BRACKET_MAP[standingGroup] : null;
+  var oppGroup = bracket ? bracket.r32 : null;
+
+  // R32 possible opponents from opposing group
+  var r32possible = [];
+  if (oppGroup && standingsData[oppGroup]) {
+    standingsData[oppGroup].forEach(function(r) {
+      if (r.team) r32possible.push({ team: r.team.name, note: r.rank + ". plass " + oppGroup });
+    });
+  }
+
+  // R16: other two groups in same half of bracket
+  var gi = GROUP_ORDER.indexOf(standingGroup);
+  var halfStart = Math.floor(gi / 4) * 4;
+  var r16groups = GROUP_ORDER.slice(halfStart, halfStart + 4).filter(function(g) { return g !== standingGroup && g !== oppGroup; });
+  var r16possible = [];
+  r16groups.forEach(function(g) {
+    if (standingsData[g]) {
+      standingsData[g].slice(0,2).forEach(function(r) {
+        if (r.team) r16possible.push({ team: r.team.name, note: r.rank + ". plass " + g });
+      });
+    }
+  });
+
+  // QF: top teams from other half
+  var qfStart = Math.floor(gi / 8) * 8;
+  var qfGroups = GROUP_ORDER.slice(qfStart, qfStart + 8).filter(function(g) {
+    return r16groups.indexOf(g) < 0 && g !== standingGroup && g !== oppGroup;
+  });
+  var qfPossible = [];
+  qfGroups.forEach(function(g) {
+    if (standingsData[g] && standingsData[g][0] && standingsData[g][0].team) {
+      qfPossible.push({ team: standingsData[g][0].team.name, note: "Leder " + g });
+    }
+  });
+
+  var rounds = [
+    { round:"Runde av 32", date:"29. jun \u2013 2. jul", scenario:(oppGroup ? "M\u00f8ter lag fra " + oppGroup : "Avhenger av gruppeplassering"), possible: r32possible },
+    { round:"Runde av 16", date:"4.\u20137. jul", possible: r16possible },
+    { round:"Kvartfinale",  date:"10.\u201312. jul", possible: qfPossible },
+    { round:"Semifinale",   date:"15.\u201316. jul", venue:"MetLife Stadium, New York/New Jersey", possible:[] },
+    { round:"Finale",       date:"19. jul",          venue:"MetLife Stadium, New York/New Jersey", possible:[], isFinal:true }
+  ];
+
+  document.getElementById("knockout").innerHTML = rounds.map(function(k, i) {
+    var isLast = i === rounds.length - 1;
+    var html = '<div><div class="ko-card">';
+    html += '<div class="ko-header"><span class="ko-round' + (k.isFinal ? " final" : "") + '">' + k.round + '</span>';
+    html += '<div class="ko-meta"><span class="ko-date">' + k.date + '</span>' + badge("tbd") + '</div></div>';
+    if (k.venue)    html += '<div class="ko-scenario">&#128205; ' + k.venue + '</div>';
+    if (k.scenario) html += '<div class="ko-scenario">&#8505;&#65039; ' + k.scenario + '</div>';
+    if (k.possible && k.possible.length) {
+      html += '<div class="po-label">Mulige motstandere</div><div class="po-grid">';
+      k.possible.forEach(function(p) {
+        html += '<div class="po-tag"><span class="po-team">' + flag(p.team) + ' ' + p.team + '</span>';
+        if (p.note) html += '<span class="po-note">' + p.note + '</span>';
+        html += '</div>';
+      });
+      html += '</div>';
+    }
+    html += '</div>';
+    if (!isLast) html += '<div class="connector">&#11015;</div>';
+    html += '</div>';
+    return html;
+  }).join("");
+}
+
+// --- Init ---
+document.addEventListener("DOMContentLoaded", function() {
+  apiKey = "c989d08553466bf553c45f75331328ed";
+  showApp();
+});
+</script>
+</body>
+</html>
